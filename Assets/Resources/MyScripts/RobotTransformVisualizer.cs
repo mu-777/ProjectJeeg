@@ -77,7 +77,7 @@ public class RobotTransformVisualizer : MonoBehaviour {
         print(x + ", " + y + ", " + z);
         this.transform.localPosition = new Vector3(x, -y, z);
     }
-    private Matrix4x4 calcTrans2() {
+    private Matrix4x4 calcTrans() {
         Func<int, float> l = (int i) => {
             return this.linkLenghes[i];
         };
@@ -104,48 +104,6 @@ public class RobotTransformVisualizer : MonoBehaviour {
         mat.Add(trans(new Vector4(c(3), -s(3), 0, l(2)), new Vector4(0, 0, -1, 0), new Vector4(s(3), c(3), 0, 0)));
         mat.Add(trans(new Vector4(c(4), -s(4), 0, l(3)), new Vector4(0, 0, 1, 0), new Vector4(-s(4), -c(4), 0, 0)));
         mat.Add(trans(new Vector4(1, 0, 0, l(4)), new Vector4(0, 1, 0, 0), new Vector4(0, 0, 1, 0)));
-
-        return mat.Aggregate((prev, curr) => {
-            return prev * curr;
-        });
-    }
-
-    private Matrix4x4 calcTrans1() {
-        Func<int, float> l = (int i) => {
-            return this.linkLenghes[i];
-        };
-        Func<int, float> th = (int i) => {
-            return this.angles[i - 1] * Mathf.Deg2Rad;
-        };
-        Func<int, float> s = (int i) => {
-            return Mathf.Sin(th(i));
-        };
-        Func<int, float> c = (int i) => {
-            return Mathf.Cos(th(i));
-        };
-        Func<Vector4, Vector4, Vector4, Matrix4x4> trans = (Vector4 row1, Vector4 row2, Vector4 row3) => {
-            Matrix4x4 m = new Matrix4x4();
-            m.SetRow(0, row1);
-            m.SetRow(1, row2);
-            m.SetRow(2, row3);
-            m.SetRow(3, new Vector4(0, 0, 0, 1));
-            return m;
-        };
-        List<Matrix4x4> mat = new List<Matrix4x4>();
-        mat.Add(trans(new Vector4(1, 0, 0, 0), new Vector4(0, 1, 0, 0), new Vector4(0, 0, 1, l(0))));
-        mat.Add(trans(new Vector4(0, 1, 0, 0), new Vector4(1, 0, 0, 0), new Vector4(0, 0, 1, 0)));
-
-        //mat.Add(trans(new Vector4(c(1), 0, s(1), 0), new Vector4(0, 1, 0, 0), new Vector4(-s(1), 0, c(1), 0)));
-        //mat.Add(trans(new Vector4(1, 0, 0, l(1)), new Vector4(0, 1, 0, 0), new Vector4(0, 0, 1, 0)));
-
-        //mat.Add(trans(new Vector4(c(2), s(2), 0, 0), new Vector4(-s(2), c(2), 0, 0), new Vector4(0, 0, 1, 0)));
-        //mat.Add(trans(new Vector4(1, 0, 0, l(2)), new Vector4(0, 1, 0, 0), new Vector4(0, 0, 1, 0)));
-
-        //mat.Add(trans(new Vector4(c(3), 0, s(3), 0), new Vector4(0, 1, 0, 0), new Vector4(-s(3), 0, c(3), 0)));
-        //mat.Add(trans(new Vector4(1, 0, 0, l(3)), new Vector4(0, 1, 0, 0), new Vector4(0, 0, 1, 0)));
-
-        //mat.Add(trans(new Vector4(c(4), s(4), 0, 0), new Vector4(-s(4), c(4), 0, 0), new Vector4(0, 0, 1, 0)));
-        //mat.Add(trans(new Vector4(1, 0, 0, l(4)), new Vector4(0, 1, 0, 0), new Vector4(0, 0, 1, 0)));
 
         return mat.Aggregate((prev, curr) => {
             return prev * curr;

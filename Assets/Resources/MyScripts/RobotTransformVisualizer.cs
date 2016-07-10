@@ -40,6 +40,7 @@ public class RobotTransformVisualizer : MonoBehaviour {
         }
         MoveEachJoints();
         CalcTipPosFromTransformMatrix();
+        print(String.Join(", ", getAngles().Select(ang => ang.ToString()).ToArray()));
     }
 
     private void MoveEachJoints() {
@@ -66,15 +67,11 @@ public class RobotTransformVisualizer : MonoBehaviour {
             print("linkLenghes: " + linkLenghes.Count);
             return;
         }
-        //Matrix4x4 t = calcTrans2();
-        //float x = t[0, 3];
-        //float y = t[1, 3];
-        //float z = t[2, 3];
 
         float x = l(1) * s(1) + l(2) * s(1) * c(2) + l(3) * (s(1) * c(2) * c(3) + c(1) * s(3)) + l(4) * (s(1) * c(2) * c(3) * c(4) + c(1) * s(3) * c(4) - s(1) * s(2) * s(4));
         float y = -l(2) * s(2) - l(3) * s(2) * c(3) - l(4) * (s(2) * c(3) * c(4) + c(2) * s(4));
         float z = l(0) + l(1) * c(1) + l(2) * c(1) * c(2) + l(3) * (c(1) * c(2) * c(3) - s(1) * s(3)) + l(4) * (c(1) * c(2) * c(3) * c(4) - s(1) * s(3) * c(4) - c(1) * s(2) * s(4));
-        print(x + ", " + y + ", " + z);
+
         this.transform.localPosition = new Vector3(x, -y, z);
     }
     private Matrix4x4 calcTrans() {
@@ -108,6 +105,16 @@ public class RobotTransformVisualizer : MonoBehaviour {
         return mat.Aggregate((prev, curr) => {
             return prev * curr;
         });
+    }
+    public List<float> getAngles() {
+        var ret = new List<float>();
+        float ang = 0.0f;
+        for (int i = 0; i < this.joints.Count; i++) {
+            ang = (Quaternion.Inverse(this.initRotations[i]) * this.joints[i].transform.localRotation).eulerAngles.y;
+            ang = ang < 90.0f ? ang : ang - 360.0f;
+            ret.Add(ang);
+        }
+        return ret;
     }
 
 }

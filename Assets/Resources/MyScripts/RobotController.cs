@@ -56,6 +56,12 @@ public class Robot {
             this.setJointAngle(i, angles[i]*Mathf.Rad2Deg);
         }
     }
+    public void setJointAnglesRadian(float angle1, float angle2, float angle3, float angle4) {
+        this.setJointAngle(0, angle1 * Mathf.Rad2Deg);
+        this.setJointAngle(1, angle2 * Mathf.Rad2Deg);
+        this.setJointAngle(2, angle3 * Mathf.Rad2Deg);
+        this.setJointAngle(3, angle4 * Mathf.Rad2Deg);
+    }
 
     public List<float> getAngles() {
         var ret = new List<float>();
@@ -162,6 +168,11 @@ public class Controller {
         return (normalized < ipsilon);
     }
 
+    public float getDistance(DenseVector angles, Vector3 targetPosition) {
+        return Vector3.Distance(Controller.toVector3(this.getEEPosVec(angles)), Controller.toVector3(Controller.toDenseVec(targetPosition)));
+    }
+
+
     static public Vector3 toVector3(DenseVector v) {
         return new Vector3((float)v[0], (float)v[1], (float)v[2]);
     }
@@ -175,40 +186,47 @@ public class Controller {
 
 public class RobotController : MonoBehaviour {
 
-    public bool startButton = false;
     public GameObject target;
     public GameObject robotBase;
     public List<GameObject> joints;
     public GameObject robotTip;
+    public List<float> initAngles = new List<float> { 25, 15, -35, 60 };
+    public bool stopFlag = false;
+    public bool initTargetPositionReset = false;
 
     private Robot robot;
     private Controller ctrler;
+    private bool ctrlFlag = false;
 
-    // Use this for initialization
     void Awake() {
     }
+    // Use this for initialization
     void Start() {
-        robot = new Robot(robotBase, joints, robotTip);
-        ctrler = new Controller(this.robot.linkLenghes);
-        this.robot.setJointAngles(new List<float> { 45, -25, -25, 90 });
-        var rightHandedEEpos = Controller.toVector3(this.ctrler.getEEPosVec(DenseVector.OfArray(this.robot.getAnglesRadian().ToArray())));
-        this.target.transform.localPosition = right2leftHand(rightHandedEEpos);
+        this.robot = new Robot(robotBase, joints, robotTip);
+        this.ctrler = new Controller(this.robot.linkLenghes);
+        this.robot.setJointAngles(initAngles);
 
-        //testMatrix();
+        var rightHandedEEpos = Controller.toVector3(this.ctrler.getEEPosVec(DenseVector.OfArray(this.robot.getAnglesRadian().ToArray())));
+        if (initTargetPositionReset) {
+            this.target.transform.position = this.transform.TransformPoint(right2leftHand(rightHandedEEpos));
+        }
     }
 
     // Update is called once per frame
     void Update() {
-        var targetPos = left2rightHand(this.target.transform.localPosition);
-        var angles = DenseVector.OfArray(this.robot.getAnglesRadian().ToArray());
-        print(Vector3.Distance(Controller.toVector3(this.ctrler.getEEPosVec(angles)), Controller.toVector3(Controller.toDenseVec(targetPos))));
 
-        for (int i = 1; (i < 1000) && this.startButton; i++) {
+        var targetPos = left2rightHand(this.transform.InverseTransformPoint(this.target.transform.position));
+        var angles = DenseVector.OfArray(this.robot.getAnglesRadian().ToArray());
+
+        var dist = this.ctrler.getDistance(angles, targetPos);
+        print(dist);
+        this.ctrlFlag = dist > 0.1f;
+
+        for (int i = 1; (i < 1000) && this.ctrlFlag && !this.stopFlag; i++) {
             angles = angles - this.ctrler.getInversedJacobi(angles) * (this.ctrler.getEEPosVec(angles) - Controller.toDenseVec(targetPos));
-            print(angles);
             if (this.ctrler.isClose(angles, targetPos)) {
-                this.robot.setJointAnglesRadian(new List<float> { (float)angles[0], (float)angles[1], (float)angles[2], (float)angles[3] });
-                this.startButton = false;
+                this.robot.setJointAnglesRadian((float)angles[0], (float)angles[1], (float)angles[2], (float)angles[3]);
+                this.ctrlFlag = false;
                 break;
             }
         }
@@ -219,19 +237,6 @@ public class RobotController : MonoBehaviour {
     }
     public static Vector3 right2leftHand(Vector3 right) {
         return new Vector3(right.x, -right.y, right.z);
-    }
-
-    void testMatrix() {
-
-        var M1 = DenseMatrix.OfArray(new double[,] { { 12, 23, 32, 2 }, { 43, 5, 61, 9 }, { 3, 25, 41, 39 } });
-        print(M1);
-        print(M1.Transpose());
-        var M2 = (M1.Transpose()) * M1;
-        print(M2.Rank());
-        var M2inv = M2.Inverse();
-        print(M2);
-        print(M2inv);
-        print(M2 * M2inv);
     }
 
 }

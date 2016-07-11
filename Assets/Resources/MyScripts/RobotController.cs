@@ -125,6 +125,7 @@ public class Controller {
 
     public DenseMatrix getInversedJacobi(DenseVector angles) {
         DenseMatrix jacobi = this.getJacobi(angles);
+        //return (DenseMatrix)((jacobi.Transpose() * jacobi).Inverse() * jacobi.Transpose());
         return (DenseMatrix)(jacobi.Transpose() * (jacobi * jacobi.Transpose()).Inverse());
     }
 

@@ -4,6 +4,42 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using MathNet.Numerics.LinearAlgebra.Double;
+using WebSocketSharp;
+using WebSocketSharp.Net;
+
+public class WSSender {
+    private string _wsAddress;
+    private WebSocket _ws;
+
+    public WSSender(string wsAddress = "ws://0.0.0.0:3000") {
+        _ws = new WebSocket(wsAddress);
+
+        _ws.OnOpen += (sender, e) => {
+            Debug.Log("WebSocket Open");
+        };
+
+        _ws.OnMessage += (sender, e) => {
+            Debug.Log("WebSocket Message Data: " + e.Data);
+        };
+
+        _ws.OnError += (sender, e) => {
+            Debug.Log("WebSocket Error Message: " + e.Message);
+        };
+
+        _ws.OnClose += (sender, e) => {
+            Debug.Log("WebSocket Close");
+        };
+    }
+
+    public void Connect() {
+        _ws.Connect();
+    }
+
+    public void Send(string message) {
+        _ws.Send(message);
+    }
+
+}
 
 //[System.Serializable]
 public class Robot {
@@ -194,10 +230,18 @@ public class RobotController : MonoBehaviour {
     public List<float> initAngles = new List<float> { 25, 15, -35, 60 };
     public bool stopFlag = false;
     public bool initTargetPositionReset = false;
+    public bool ActiveWebsocket = true;
+    public string WebsocketServerIP = "ws://0.0.0.0:3000";
 
     private Robot robot;
     private Controller ctrler;
     private bool ctrlFlag = false;
+
+    private WSSender wsSender;
+    private JSONObject anglesJson;
+    private List<string> jsonFieldStrs = new List<string>() {
+        "angle1", "angle2", "angle3", "angle4"
+    };
 
     void Awake() {
     }
@@ -211,6 +255,11 @@ public class RobotController : MonoBehaviour {
         if (initTargetPositionReset) {
             this.target.transform.position = this.transform.TransformPoint(right2leftHand(rightHandedEEpos));
         }
+
+        if (ActiveWebsocket) {
+            initWebsocket(this.robot.getAnglesRadian());
+        }
+
     }
 
     // Update is called once per frame
@@ -220,7 +269,7 @@ public class RobotController : MonoBehaviour {
         var angles = DenseVector.OfArray(this.robot.getAnglesRadian().ToArray());
 
         var dist = this.ctrler.getDistance(angles, targetPos);
-        print(dist);
+
         this.ctrlFlag = dist > 0.1f;
 
         for (int i = 1; (i < 1000) && this.ctrlFlag && !this.stopFlag; i++) {
@@ -228,6 +277,7 @@ public class RobotController : MonoBehaviour {
             if (this.ctrler.isClose(angles, targetPos)) {
                 this.robot.setJointAnglesRadian((float)angles[0], (float)angles[1], (float)angles[2], (float)angles[3]);
                 this.ctrlFlag = false;
+                sendAngleData(angles.ToList());
                 break;
             }
         }
@@ -238,6 +288,20 @@ public class RobotController : MonoBehaviour {
     }
     public static Vector3 right2leftHand(Vector3 right) {
         return new Vector3(right.x, -right.y, right.z);
+    }
+
+    private void initWebsocket(List<double> angles) {
+        this.wsSender = new WSSender(this.WebsocketServerIP);
+        this.wsSender.Connect();
+        this.anglesJson = new JSONObject();
+        sendAngleData(angles);
+    }
+
+    private void sendAngleData(List<double> angles) {
+        for (int i = 0; i < angles.Count; i++) {
+            this.anglesJson.SetField(this.jsonFieldStrs[i], (float)angles[i]);
+        }
+        wsSender.Send(this.anglesJson.ToString());
     }
 
 }
